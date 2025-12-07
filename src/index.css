@@ -13,9 +13,11 @@ body {
   margin: 10px 20px 0 0;
 }
 
-.person-info:hover {
-  padding: 30px;
-  border: 2px solid pink;
+.person-info {
+  &:hover, &.selected {
+    padding: 30px;
+    border: 2px solid pink;
+  }
 }
 
 .firstNameLastName {

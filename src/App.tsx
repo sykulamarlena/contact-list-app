@@ -1,20 +1,53 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import apiData from "./api";
 import PersonInfo from "./PersonInfo";
 
-function App() {
-  const [data, setData] = React.useState([]);
-  const [selected, setSelected] = React.useState([]);
+type Person = {
+  id: string;
+  firstNameLastName: string;
+  jobTitle: string;
+  emailAddress: string;
+};
 
-  //  TODO fetch contacts using apiData function, handle loading and error states
+function App() {
+  const [data, setData] = useState<Person[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result: Person[] = await apiData();
+        setData(result);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
+    fetchData()
+  }, []);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const copy = new Set(prev);
+      if (copy.has(id)) {
+        copy.delete(id);
+      } else {
+        copy.add(id);
+      }
+      return copy;
+    });
+  };
 
   return (
     <>
-      <div className="selected">Selected contacts: {selected.length}</div>
+      <div className="selected">Selected contacts: {selectedIds.size}</div>
       <div className="list">
         {data.map((personInfo) => (
-          // @ts-ignore
-          <PersonInfo key={personInfo.id} data={personInfo} />
+          <PersonInfo
+            key={personInfo.id}
+            data={personInfo}
+            selected={selectedIds.has(personInfo.id)}
+            onToggle={() => toggleSelect(personInfo.id)}
+          />
         ))}
       </div>
     </>

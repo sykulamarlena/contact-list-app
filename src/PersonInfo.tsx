@@ -1,15 +1,16 @@
 import React from "react";
 
-type Props = {
+type PersonInfoProps = {
   data: {
     firstNameLastName: string;
     jobTitle: string;
     emailAddress: string;
   };
+  selected: boolean;
+  onToggle: () => void;
 };
 
-function PersonInfo(props: Props) {
-  const { data } = props;
+function PersonInfo({ data, selected, onToggle }: PersonInfoProps) {
   return (
     <div
       style={{
@@ -23,7 +24,8 @@ function PersonInfo(props: Props) {
         background: "#fff",
         cursor: "pointer",
       }}
-      className="person-info"
+      className={`person-info ${selected ? "selected" : ""}` } 
+      onClick={onToggle}
     >
       <div className="firstNameLastName">{data.firstNameLastName}</div>
       <div className="jobTitle">{data.jobTitle}</div>
