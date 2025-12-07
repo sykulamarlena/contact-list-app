@@ -55,6 +55,10 @@ function App() {
     fetchData(currentPage + 1);
   };
 
+  const retryPage = (pageIndex: number) => {
+    fetchData(pageIndex);
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const copy = new Set(prev);
@@ -84,6 +88,21 @@ function App() {
     return pagesArray.some((v) => v.status === PageStatus.Loading);
   };
 
+  const renderErrors = () => {
+    const pagesWithError = Array.from(pages.entries()).filter(([, v]) => v.status === "error");    
+    return pagesWithError.map(([pageIndex]) => (
+      <div key={pageIndex} className="error-indicator">
+        <span>Nie udało się załadować strony {pageIndex + 1}.</span>
+        <button
+          onClick={() => retryPage(pageIndex)}
+          className="retry-button"
+        >
+          Spróbuj ponownie
+        </button>
+      </div>
+    ))
+  };
+
   return (
     <>
       <Header selectedCount={selectedIds.size} />
@@ -100,10 +119,13 @@ function App() {
           </div>
           {isAnyLoading() && (
             <div className="loading-indicator">
-              <span>Ładowanie...</span>
+              <span className="loader"></span>
             </div>
           )}
-          <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading()}>Load More</button>
+          {renderErrors()}
+          {!isAnyLoading() && !renderErrors().length && (
+            <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading()}>Load More</button>
+           )}
         </section>
     </>
   );
