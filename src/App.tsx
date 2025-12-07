@@ -11,35 +11,42 @@ type Person = {
 };
 
 enum PageStatus {
+  Idle = "idle",
   Loading = "loading",
   Error = "error",
   Done = "done",
 }
 
+type PageState = {
+  status: PageStatus;
+  items: Person[];
+  error?: string;
+};
+
 function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(-1);
-  const [pages, setPages] = useState<Map<number, { status: PageStatus; items: Person[]; error?: string }>>(new Map());
+  const [pages, setPages] = useState<PageState[]>([]);
 
   const fetchData = useCallback(async (pageIndex: number) => {
     setPages((prev) => {
-      const copy = new Map(prev);
-      copy.set(pageIndex, { status: PageStatus.Loading, items: [] });
+      const copy = [...prev];
+      copy[pageIndex] = { status: PageStatus.Loading, items: [] };
       return copy;
     });
 
     try {
       const response = await apiData();
       setPages((prev) => {
-        const copy = new Map(prev);
-        copy.set(pageIndex, { status: PageStatus.Done, items: response });
+        const copy = [...prev];
+        copy[pageIndex] = { status: PageStatus.Done, items: response };
         return copy;
       });
       setCurrentPage(pageIndex);
     } catch (error: any) {
       setPages((prev) => {
-        const copy = new Map(prev);
-        copy.set(pageIndex, { status: PageStatus.Error, items: [], error: error.message || String(error) });
+        const copy = [...prev];
+        copy[pageIndex] = { status: PageStatus.Error, items: [], error: error.message };
         return copy;
       });
     }
@@ -72,36 +79,20 @@ function App() {
   }, [setSelectedIds]);
 
   const fetchedItems = useMemo(() => {
-    //sort pages by key (page index) to maintain order
-    const pagesArray = Array.from(pages.entries()).sort((a, b) => a[0] - b[0]);
-    const items: Person[] = [];
-
-    for (const [, payload] of pagesArray) {
-      if (payload.status === PageStatus.Done) {
-        items.push(...payload.items)
-      }
-    };
-    return items;
-  }, [pages]);
-
-  const isAnyLoading = useMemo(() => {
-     const pagesArray = Array.from(pages.values());
-    return pagesArray.some((v) => v.status === PageStatus.Loading);
+    return pages.flatMap((p) => p.status === PageStatus.Done ? p.items : []);
   }, [pages]);
 
   const renderErrors = useMemo(() => {
-    const pagesWithError = Array.from(pages.entries()).filter(([, v]) => v.status === PageStatus.Error);    
-    return pagesWithError.map(([pageIndex]) => (
-      <div key={pageIndex} className="error-indicator">
-        <span>Strona {pageIndex + 1} nie została pobrana.</span>
-        <button
-          onClick={() => retryPage(pageIndex)}
-          className="retry-button"
-        >
-          Spróbuj ponownie
-        </button>
-      </div>
-    ))
+    return pages.map((p, i) =>
+      p.status === PageStatus.Error ? (
+        <div key={i} className="error-indicator">
+          <span>Strona {i + 1} nie została pobrana.</span>
+          <button onClick={() => retryPage(i)} className="retry-button">
+            Spróbuj ponownie
+          </button>
+        </div>
+      ) : null
+    )
   }, [pages, retryPage]);
 
   const displayedList = useMemo(() => {
@@ -109,6 +100,9 @@ function App() {
     const unselectedItems = fetchedItems.filter((it) => !selectedIds.has(it.id));
     return [...selectedItems, ...unselectedItems];
   }, [fetchedItems, selectedIds]);
+
+  const isAnyLoading = pages.some((p) => p.status === PageStatus.Loading);
+  const isAnyError = pages.some((p) => p.status === PageStatus.Error);
   return (
     <>
       <Header selectedCount={selectedIds.size} />
@@ -129,8 +123,8 @@ function App() {
             </div>
           )}
           {renderErrors}
-          {!isAnyLoading && !renderErrors.length && (
-            <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading}>Load More</button>
+          {!isAnyLoading && !isAnyError && (
+            <button className="load-more-button" onClick={loadMore}>Load More</button>
            )}
         </section>
     </>
