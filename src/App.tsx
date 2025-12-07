@@ -9,7 +9,7 @@ function App() {
   //  TODO fetch contacts using apiData function, handle loading and error states
 
   return (
-    <div className="App">
+    <>
       <div className="selected">Selected contacts: {selected.length}</div>
       <div className="list">
         {data.map((personInfo) => (
@@ -17,7 +17,7 @@ function App() {
           <PersonInfo key={personInfo.id} data={personInfo} />
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
