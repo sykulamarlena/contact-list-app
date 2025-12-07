@@ -1,32 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import apiData from "./api";
-import InfoCard from "./components/card/InfoCard";
 import Header from "./components/header/Header";
-
-type Person = {
-  id: string;
-  firstNameLastName: string;
-  jobTitle: string;
-  emailAddress: string;
-};
-
-enum PageStatus {
-  Idle = "idle",
-  Loading = "loading",
-  Error = "error",
-  Done = "done",
-}
-
-type PageState = {
-  status: PageStatus;
-  items: Person[];
-  error?: string;
-};
+import List, { PageState, PageStatus } from "./components/list/List";
 
 function App() {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(-1);
   const [pages, setPages] = useState<PageState[]>([]);
+  const [currentPage, setCurrentPage] = useState(-1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async (pageIndex: number) => {
     setPages((prev) => {
@@ -78,55 +58,18 @@ function App() {
     });
   }, [setSelectedIds]);
 
-  const fetchedItems = useMemo(() => {
-    return pages.flatMap((p) => p.status === PageStatus.Done ? p.items : []);
-  }, [pages]);
-
-  const renderErrors = useMemo(() => {
-    return pages.map((p, i) =>
-      p.status === PageStatus.Error ? (
-        <div key={i} className="error-indicator">
-          <span>Strona {i + 1} nie została pobrana.</span>
-          <button onClick={() => retryPage(i)} className="retry-button">
-            Spróbuj ponownie
-          </button>
-        </div>
-      ) : null
-    )
-  }, [pages, retryPage]);
-
-  const displayedList = useMemo(() => {
-    const selectedItems = fetchedItems.filter((it) => selectedIds.has(it.id));
-    const unselectedItems = fetchedItems.filter((it) => !selectedIds.has(it.id));
-    return [...selectedItems, ...unselectedItems];
-  }, [fetchedItems, selectedIds]);
-
-  const isAnyLoading = pages.some((p) => p.status === PageStatus.Loading);
-  const isAnyError = pages.some((p) => p.status === PageStatus.Error);
   return (
     <>
       <Header selectedCount={selectedIds.size} />
-        <section className="content">
-          <div className="list">
-            {displayedList.map((personInfo) => (
-              <InfoCard
-                key={personInfo.id}
-                data={personInfo}
-                selected={selectedIds.has(personInfo.id)}
-                onToggle={() => toggleSelect(personInfo.id)}
-              />
-            ))}
-          </div>
-          {isAnyLoading && (
-            <div className="loading-indicator">
-              <span className="loader"></span>
-            </div>
-          )}
-          {renderErrors}
-          {!isAnyLoading && !isAnyError && (
-            <button className="load-more-button" onClick={loadMore}>Load More</button>
-           )}
-        </section>
+      <section className="content">
+        <List
+          loadMore={loadMore}
+          pages={pages}
+          retryPage={retryPage}
+          selectedIds={selectedIds}
+          toggleSelect={toggleSelect}
+        />
+      </section>
     </>
   );
 }
