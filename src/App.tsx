@@ -51,15 +51,15 @@ function App() {
     };
   }, [currentPage, fetchData]);
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     fetchData(currentPage + 1);
-  };
+  }, [currentPage, fetchData]);
 
-  const retryPage = (pageIndex: number) => {
+  const retryPage = useCallback((pageIndex: number) => {
     fetchData(pageIndex);
-  };
+  }, [fetchData]);
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const copy = new Set(prev);
       if (copy.has(id)) {
@@ -69,10 +69,11 @@ function App() {
       }
       return copy;
     });
-  };
+  }, [setSelectedIds]);
 
   const fetchedItems = useMemo(() => {
-    const pagesArray = Array.from(pages.entries());
+    //sort pages by key (page index) to maintain order
+    const pagesArray = Array.from(pages.entries()).sort((a, b) => a[0] - b[0]);
     const items: Person[] = [];
 
     for (const [, payload] of pagesArray) {
@@ -83,16 +84,16 @@ function App() {
     return items;
   }, [pages]);
 
-  const isAnyLoading = () => {
-    const pagesArray = Array.from(pages.values());
+  const isAnyLoading = useMemo(() => {
+     const pagesArray = Array.from(pages.values());
     return pagesArray.some((v) => v.status === PageStatus.Loading);
-  };
+  }, [pages]);
 
-  const renderErrors = () => {
-    const pagesWithError = Array.from(pages.entries()).filter(([, v]) => v.status === "error");    
+  const renderErrors = useMemo(() => {
+    const pagesWithError = Array.from(pages.entries()).filter(([, v]) => v.status === PageStatus.Error);    
     return pagesWithError.map(([pageIndex]) => (
       <div key={pageIndex} className="error-indicator">
-        <span>Nie udało się załadować strony {pageIndex + 1}.</span>
+        <span>Strona {pageIndex + 1} nie została pobrana.</span>
         <button
           onClick={() => retryPage(pageIndex)}
           className="retry-button"
@@ -101,14 +102,19 @@ function App() {
         </button>
       </div>
     ))
-  };
+  }, [pages, retryPage]);
 
+  const displayedList = useMemo(() => {
+    const selectedItems = fetchedItems.filter((it) => selectedIds.has(it.id));
+    const unselectedItems = fetchedItems.filter((it) => !selectedIds.has(it.id));
+    return [...selectedItems, ...unselectedItems];
+  }, [fetchedItems, selectedIds]);
   return (
     <>
       <Header selectedCount={selectedIds.size} />
         <section className="content">
           <div className="list">
-            {fetchedItems.map((personInfo) => (
+            {displayedList.map((personInfo) => (
               <InfoCard
                 key={personInfo.id}
                 data={personInfo}
@@ -117,14 +123,14 @@ function App() {
               />
             ))}
           </div>
-          {isAnyLoading() && (
+          {isAnyLoading && (
             <div className="loading-indicator">
               <span className="loader"></span>
             </div>
           )}
-          {renderErrors()}
-          {!isAnyLoading() && !renderErrors().length && (
-            <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading()}>Load More</button>
+          {renderErrors}
+          {!isAnyLoading && !renderErrors.length && (
+            <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading}>Load More</button>
            )}
         </section>
     </>
