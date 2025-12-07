@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import apiData from "./api";
-import InfoCard from "../src/components/card/InfoCard";
-import Header from "../src/components/header/Header";
+import InfoCard from "./components/card/InfoCard";
+import Header from "./components/header/Header";
 
 type Person = {
   id: string;
@@ -10,21 +10,50 @@ type Person = {
   emailAddress: string;
 };
 
+enum PageStatus {
+  Loading = "loading",
+  Error = "error",
+  Done = "done",
+}
+
 function App() {
-  const [data, setData] = useState<Person[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(-1);
+  const [pages, setPages] = useState<Map<number, { status: PageStatus; items: Person[]; error?: string }>>(new Map());
+
+  const fetchData = useCallback(async (pageIndex: number) => {
+    setPages((prev) => {
+      const copy = new Map(prev);
+      copy.set(pageIndex, { status: PageStatus.Loading, items: [] });
+      return copy;
+    });
+
+    try {
+      const response = await apiData();
+      setPages((prev) => {
+        const copy = new Map(prev);
+        copy.set(pageIndex, { status: PageStatus.Done, items: response });
+        return copy;
+      });
+      setCurrentPage(pageIndex);
+    } catch (error: any) {
+      setPages((prev) => {
+        const copy = new Map(prev);
+        copy.set(pageIndex, { status: PageStatus.Error, items: [], error: error.message || String(error) });
+        return copy;
+      });
+    }
+  }, [setPages, setCurrentPage]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const result: Person[] = await apiData();
-        setData(result);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    }
-    fetchData()
-  }, []);
+    if (currentPage === -1) {
+      fetchData(0);
+    };
+  }, [currentPage, fetchData]);
+
+  const loadMore = () => {
+    fetchData(currentPage + 1);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -38,12 +67,29 @@ function App() {
     });
   };
 
+  const fetchedItems = useMemo(() => {
+    const pagesArray = Array.from(pages.entries());
+    const items: Person[] = [];
+
+    for (const [, payload] of pagesArray) {
+      if (payload.status === PageStatus.Done) {
+        items.push(...payload.items)
+      }
+    };
+    return items;
+  }, [pages]);
+
+  const isAnyLoading = () => {
+    const pagesArray = Array.from(pages.values());
+    return pagesArray.some((v) => v.status === PageStatus.Loading);
+  };
+
   return (
     <>
       <Header selectedCount={selectedIds.size} />
         <section className="content">
           <div className="list">
-            {data.map((personInfo) => (
+            {fetchedItems.map((personInfo) => (
               <InfoCard
                 key={personInfo.id}
                 data={personInfo}
@@ -52,6 +98,12 @@ function App() {
               />
             ))}
           </div>
+          {isAnyLoading() && (
+            <div className="loading-indicator">
+              <span>Ładowanie...</span>
+            </div>
+          )}
+          <button className="load-more-button" onClick={loadMore} disabled={isAnyLoading()}>Load More</button>
         </section>
     </>
   );
