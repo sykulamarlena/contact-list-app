@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import apiData from "./api";
-import PersonInfo from "./PersonInfo";
+import InfoCard from "../src/components/card/InfoCard";
+import Header from "../src/components/header/Header";
 
 type Person = {
   id: string;
@@ -39,17 +40,19 @@ function App() {
 
   return (
     <>
-      <div className="selected">Selected contacts: {selectedIds.size}</div>
-      <div className="list">
-        {data.map((personInfo) => (
-          <PersonInfo
-            key={personInfo.id}
-            data={personInfo}
-            selected={selectedIds.has(personInfo.id)}
-            onToggle={() => toggleSelect(personInfo.id)}
-          />
-        ))}
-      </div>
+      <Header selectedCount={selectedIds.size} />
+        <section className="content">
+          <div className="list">
+            {data.map((personInfo) => (
+              <InfoCard
+                key={personInfo.id}
+                data={personInfo}
+                selected={selectedIds.has(personInfo.id)}
+                onToggle={() => toggleSelect(personInfo.id)}
+              />
+            ))}
+          </div>
+        </section>
     </>
   );
 }
